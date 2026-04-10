@@ -1,0 +1,36 @@
+version: '3.8'
+services:
+  mongodb:
+    image: mongo:6
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongo_data:/data/db
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+
+  server:
+    build: ./server
+    ports:
+      - "3001:3001"
+    environment:
+      - MONGO_URI=mongodb://mongodb:27017/codeeditor
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      - mongodb
+      - redis
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Mount docker socket so server can create containers
+
+volumes:
+  mongo_data:
+
+
+
+
+
+
