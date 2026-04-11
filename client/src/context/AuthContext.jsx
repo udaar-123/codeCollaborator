@@ -1,10 +1,10 @@
 import axios from "axios";
-import {socket} from "../config/socket";
+import {socket} from "../config/socket.js";
 import {useContext,createContext,useState,useEffect} from 'react';
 
 const AuthContext = createContext();
 const API = axios.create({
-    baseURL:import.meta.env.VITE_SERVER_URL || "http://localhost:3000",
+    baseURL: import.meta.env.VITE_SERVER_URL || "http://localhost:3000",
     withCredentials:true
 })
 
@@ -19,6 +19,7 @@ export const AuthProvider = ({children})=>{
             setUser(res.data.user);
             socket.connect();
         } catch (error) {
+            setUser(null)
             console.log("error fetching user",error);
         }finally{
             setLoading(false);
