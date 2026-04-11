@@ -8,6 +8,7 @@ const EditorToolbar = ({
   roomName,
   participants,
   isOwner,
+  onReset,
 }) => {
   return (
     <div style={styles.toolbar}>
@@ -50,8 +51,15 @@ const EditorToolbar = ({
           ))}
         </select>
       </div>
-2
+
       <div style={styles.right}>
+        <button
+          onClick={onReset}
+          style={styles.resetBtn}
+          title="Reset to boilerplate code"
+        >
+          ↻ Reset
+        </button>
         <button
           onClick={onRun}
           disabled={isRunning}
@@ -59,6 +67,7 @@ const EditorToolbar = ({
             ...styles.runBtn,
             opacity: isRunning ? 0.7 : 1,
             cursor: isRunning ? "not-allowed" : "pointer",
+            marginLeft: "8px",
           }}
         >
           {isRunning ? "⏳ Running..." : "▶ Run"}
@@ -141,6 +150,17 @@ const styles = {
     borderRadius: "6px",
     fontSize: "0.85rem",
     fontWeight: "600",
+  },
+  resetBtn: {
+    background: "#1f6feb",
+    border: "none",
+    color: "#fff",
+    padding: "6px 12px",
+    borderRadius: "6px",
+    fontSize: "0.85rem",
+    fontWeight: "600",
+    cursor: "pointer",
+    transition: "background 0.2s",
   },
 }
 

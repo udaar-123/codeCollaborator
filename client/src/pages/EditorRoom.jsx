@@ -108,6 +108,17 @@ const EditorRoom = () => {
     }
   }, [socket, roomId])
 
+  const handleReset = useCallback(() => {
+    const boilerplate = DEFAULT_CODE[language]
+    setCode(boilerplate)
+    // Emit reset to server - server will broadcast to all users
+    socket.emit("reset-room", {
+      roomId,
+      language,
+      content: boilerplate,
+    })
+  }, [language, socket, roomId])
+
   const handleLanguageChange = useCallback((newLang) => {
     setLanguage(newLang)
     setCode(DEFAULT_CODE[newLang])
@@ -166,6 +177,7 @@ const EditorRoom = () => {
         roomName={room?.name}
         participants={room?.participants}
         isOwner={isOwner}
+        onReset={handleReset}
       />
 
       <div style={styles.main}>

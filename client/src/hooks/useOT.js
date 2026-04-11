@@ -63,12 +63,32 @@ export const useOT = ({ socket, roomId, editorRef, setCode, userId }) => {
       }
     }
 
+    // ─── ROOM RESET ──────────────────────────────────────────
+    // Fires when someone clicks Reset button
+    // Restores boilerplate code for all users
+    const onRoomReset = ({ content, version, language }) => {
+      console.log("🔄 room-reset received:", {
+        version,
+        preview: content.slice(0, 30)
+      })
+
+      versionRef.current = version
+      isApplyingRef.current = true
+      setCode(content)
+
+      setTimeout(() => {
+        isApplyingRef.current = false
+      }, 100)
+    }
+
     socket.on("room-state", onRoomState)
     socket.on("operation", onOperation)
+    socket.on("room-reset", onRoomReset)
 
     return () => {
       socket.off("room-state", onRoomState)
       socket.off("operation", onOperation)
+      socket.off("room-reset", onRoomReset)
     }
   }, [socket, editorRef, setCode, userId])
 

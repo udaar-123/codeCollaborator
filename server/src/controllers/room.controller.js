@@ -1,6 +1,7 @@
 import Room from "../models/room.schema.js";
 import User from "../models/user.schema.js";
 import {asyncHandler} from "../middlewares/errorHandle.js"
+import { DEFAULT_CODE } from "../utils/languageConfig.js"
 
 const CURSOR_COLORS = [
   "#58a6ff", "#3fb950", "#f78166",
@@ -28,11 +29,14 @@ export const createRoom = asyncHandler(async (req,res)=>{
    if(!name){
     return res.status(400).json({message:"Room name is required"})
    }
+   const selectedLang = language || "javascript"
    const room = await Room.create({
     name,
-    language:language || "javascript",
+    language: selectedLang,
     isPublic:isPublic !== undefined ? isPublic : true,
     owner:req.user._id,
+    content: DEFAULT_CODE[selectedLang] || "",
+    version: 0,
     participants:[{
         userId:req.user._id,
         role:"owner",

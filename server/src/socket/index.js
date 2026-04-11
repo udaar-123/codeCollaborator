@@ -125,6 +125,39 @@ export function initServer(server){
             socket.to(roomId).emit("language-changed", { language })
         })
 
+        // ─── RESET ROOM ───────────────────────────────────────────
+        socket.on("reset-room", async ({ roomId, language, content }) => {
+            try {
+                const state = getRoomState(roomId)
+                if (!state) return
+
+                // Update in-memory state with boilerplate
+                state.content = content
+                state.version = 0
+                state.operations = []
+
+                // Broadcast reset to all users in room
+                io.to(roomId).emit("room-reset", {
+                    content,
+                    version: 0,
+                    language,
+                })
+
+                // Save to DB immediately
+                await Room.updateOne(
+                    { roomId },
+                    {
+                        content,
+                        version: 0,
+                    }
+                )
+
+                logger.info({ event: "room_reset", roomId, userId })
+            } catch (error) {
+                logger.error({ event: "reset_room_error", error: error.message })
+            }
+        })
+
         // ─── DISCONNECT ──────────────────────────────────────────
         socket.on("disconnect", async () => {
             if (socket.currentRoom) {
