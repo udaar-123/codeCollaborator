@@ -45,3 +45,31 @@ public class solution {
     }
 }`,
 }
+
+export const LANGUAGE_CONFIGS = {
+  javascript: {
+    image: "node:18-alpine",
+    filename: "solution.js",
+    runCmd: ["node", "solution.js"],
+  },
+  typescript: {
+    image: "node:18-alpine",
+    filename: "solution.ts",
+    runCmd: ["npx", "--yes", "ts-node", "solution.ts"],
+  },
+  python: {
+    image: "python:3.11-alpine",
+    filename: "solution.py",
+    runCmd: ["python", "solution.py"],
+  },
+  cpp: {
+    image: "gcc:latest",
+    filename: "solution.cpp",
+    runCmd: ["sh", "-c", "g++ solution.cpp -o solution && ./solution"],
+  },
+  java: {
+    image: "eclipse-temurin:17-alpine",
+    filename: "solution.java",
+    runCmd: ["sh", "-c", "javac solution.java && java solution"],
+  },
+}

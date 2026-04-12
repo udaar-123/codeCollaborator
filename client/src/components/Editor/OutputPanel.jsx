@@ -1,12 +1,15 @@
 import { useRef, useEffect } from "react"
+
 const OutputPanel = ({ output, isRunning, onClear }) => {
   const bottomRef = useRef(null)
+
+
   useEffect(() => {
     bottomRef.current?.scrollIntoView({ behavior: "smooth" })
   }, [output])
+
   return (
     <div style={styles.container}>
-      {/* Output header */}
       <div style={styles.header}>
         <div style={styles.headerLeft}>
           <span style={styles.title}>Output</span>
@@ -16,14 +19,17 @@ const OutputPanel = ({ output, isRunning, onClear }) => {
         </div>
         <button
           onClick={onClear}
-          style={styles.clearBtn}
-          title="Clear output"
+          disabled={isRunning}
+          style={{
+            ...styles.clearBtn,
+            opacity: isRunning ? 0.5 : 1,
+            cursor: isRunning ? "not-allowed" : "pointer",
+          }}
         >
           Clear
         </button>
       </div>
 
-      {/* Output content */}
       <div style={styles.output}>
         {output.length === 0 ? (
           <span style={styles.placeholder}>
@@ -35,12 +41,15 @@ const OutputPanel = ({ output, isRunning, onClear }) => {
               key={i}
               style={{
                 ...styles.line,
-                color: line.type === "error"   ? "#f85149" :
-                       line.type === "system"  ? "#8b949e" :
-                       "#e6edf3"
+                color: line.type === "error"  ? "#f85149" :
+                       line.type === "system" ? "#8b949e" :
+                       "#e6edf3",
+                // System messages get different style
+                fontStyle: line.type === "system" ? "italic" : "normal",
               }}
             >
-              {line.text}
+              {/* Empty lines still need height */}
+              {line.text || "\u00A0"}
             </div>
           ))
         )}
@@ -80,7 +89,6 @@ const styles = {
   runningBadge: {
     fontSize: "0.75rem",
     color: "#3fb950",
-    animation: "pulse 1s infinite",
   },
   clearBtn: {
     background: "none",
@@ -88,7 +96,6 @@ const styles = {
     color: "#8b949e",
     padding: "3px 10px",
     borderRadius: "4px",
-    cursor: "pointer",
     fontSize: "0.78rem",
   },
   output: {
@@ -97,11 +104,12 @@ const styles = {
     padding: "12px 16px",
     fontFamily: "'Fira Code', Consolas, monospace",
     fontSize: "13px",
-    lineHeight: 1.6,
+    lineHeight: 1.8,
   },
   line: {
     whiteSpace: "pre-wrap",
     wordBreak: "break-all",
+    minHeight: "1.8em",
   },
   placeholder: {
     color: "#484f58",

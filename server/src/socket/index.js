@@ -1,3 +1,4 @@
+import { executeCode } from "../services/docker.service.js"
 import { Server } from "socket.io"
 import logger from '../utils/logger.js'
 import { verifySocketToken } from '../middlewares/verifySocketToken.js'
@@ -157,6 +158,45 @@ export function initServer(server){
                 logger.error({ event: "reset_room_error", error: error.message })
             }
         })
+
+        socket.on("run-code", async ({ code, language, roomId, runId }) => {
+  console.log(`▶ Run code: ${language}, room: ${roomId}, user: ${userId}`)
+
+  if (!code || !code.trim()) {
+    socket.emit("output-error", { message: "No code to run", runId })
+    return
+  }
+
+  // Emit system message to show execution started
+  socket.emit("output-chunk", {
+    data: `▶ Running ${language}...\n`,
+    type: "system",
+    runId
+  })
+
+  await executeCode(
+    code,
+    language,
+
+    // onChunk — called for each output line
+    (chunk) => {
+      
+      socket.emit("output-chunk", { data: chunk, type: "output", runId })
+    },
+
+    // onEnd — called when execution finishes
+    () => {
+         console.log("✅ Emitting output-end")
+      socket.emit("output-end", { runId })
+    },
+
+    // onError — called on execution error
+    (message) => {
+        console.log("❌ Emitting output-error:", message) 
+      socket.emit("output-error", { message, runId })
+    }
+  )
+})
 
         // ─── DISCONNECT ──────────────────────────────────────────
         socket.on("disconnect", async () => {
