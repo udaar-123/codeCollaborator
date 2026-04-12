@@ -7,7 +7,9 @@ import MonacoEditor from "../components/Editor/MonacoEditor.jsx";
 import EditorToolbar from "../components/Editor/EditorToolbar.jsx";
 import OutputPanel from "../components/Editor/OutputPanel.jsx";
 import RoomHeader from "../components/Room/RoomHeader.jsx";
+import RemoteCursorsOverlay from "../components/Editor/RemoteCursorOverlay.jsx";
 import Toast from "../components/shared/Toast.jsx";
+import { useCursors } from "../hooks/useCursors.js";
 import { DEFAULT_CODE } from "../utils/languageConfig.js";
 
 const EditorRoom = () => {
@@ -33,6 +35,19 @@ const EditorRoom = () => {
     userId: user?._id,
   });
 
+  const myColor =
+    room?.participants?.find(
+      (p) => p.userId?._id === user?._id || p.userId === user?._id,
+    )?.color || "#58a6ff";
+
+  const { handleCursorChange, remoteCursors, clearAllCursors } = useCursors({
+    socket,
+    roomId,
+    user,
+    editorRef,
+    myColor,
+  });
+
   useEffect(() => {
     const load = async () => {
       try {
@@ -56,6 +71,7 @@ const EditorRoom = () => {
     load();
 
     return () => {
+      clearAllCursors();
       socket.emit("leave-room", { roomId });
     };
   }, [roomId]);
@@ -203,14 +219,20 @@ const EditorRoom = () => {
       />
 
       <div style={styles.main}>
-        <div style={styles.editorPane}>
+        <div style={{ ...styles.editorPane, position: "relative" }}>
           <MonacoEditor
             content={code}
             language={language}
-            onChange={handleChange} // ← OT handler not setCode
+            onChange={handleChange}
             onMount={(editor) => {
-              editorRef.current = editor; // ← give OT hook access to editor
+              editorRef.current = editor;
             }}
+            onCursorChange={handleCursorChange}
+          />
+          <RemoteCursorsOverlay
+            remoteCursors={remoteCursors}
+            myName={user?.name}
+            myColor={myColor}
           />
         </div>
 
