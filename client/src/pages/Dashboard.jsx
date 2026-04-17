@@ -1,66 +1,66 @@
-import { useState, useEffect } from "react"
-import { useNavigate } from "react-router-dom"
-import { useAuth } from "../context/AuthContext.jsx"
-import { useRoom } from "../hooks/useRoom.js"
-import CreateRoom from "../components/Room/CreateRoom.jsx"
-import JoinRoom from "../components/Room/JoinRoom.jsx"
-import Toast from "../components/shared/Toast.jsx"
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../context/AuthContext.jsx";
+import { useRoom } from "../hooks/useRoom.js";
+import CreateRoom from "../components/Room/CreateRoom.jsx";
+import JoinRoom from "../components/Room/JoinRoom.jsx";
+import Toast from "../components/shared/Toast.jsx";
 
 const LANGUAGE_ICONS = {
   javascript: "🟨",
-  python:     "🐍",
-  cpp:        "⚙️",
-  java:       "☕",
+  python: "🐍",
+  cpp: "⚙️",
+  java: "☕",
   typescript: "🔷",
-}
+};
 
 const Dashboard = () => {
-  const { user, logout } = useAuth()
-  const { getMyRooms, deleteRoom, loading } = useRoom()
-  const navigate = useNavigate()
+  const { user, logout, API } = useAuth();
+  const { getMyRooms, deleteRoom, loading } = useRoom();
+  const navigate = useNavigate();
 
-  const [rooms, setRooms] = useState([])
-  const [showCreate, setShowCreate] = useState(false)
-  const [showJoin, setShowJoin] = useState(false)
-  const [toast, setToast] = useState(null)
+  const [rooms, setRooms] = useState([]);
+  const [showCreate, setShowCreate] = useState(false);
+  const [showJoin, setShowJoin] = useState(false);
+  const [toast, setToast] = useState(null);
 
   // Load rooms on mount
   useEffect(() => {
     const load = async () => {
-      const data = await getMyRooms()
-      setRooms(data)
-    }
-    load()
-  }, [])
+      const data = await getMyRooms();
+      setRooms(data);
+    };
+    load();
+  }, []);
 
   const handleDelete = async (roomId, e) => {
-    e.stopPropagation()  // prevent navigating to room
-    if (!confirm("Delete this room?")) return
+    e.stopPropagation(); // prevent navigating to room
+    if (!confirm("Delete this room?")) return;
 
     try {
-      await deleteRoom(roomId)
-      setRooms(prev => prev.filter(r => r.roomId !== roomId))
-      setToast({ message: "Room deleted", type: "success" })
+      await deleteRoom(roomId);
+      setRooms((prev) => prev.filter((r) => r.roomId !== roomId));
+      setToast({ message: "Room deleted", type: "success" });
     } catch (err) {
-      setToast({ message: err.message, type: "error" })
+      setToast({ message: err.message, type: "error" });
     }
-  }
+  };
 
   const handleLogout = async () => {
-    await logout()
-    navigate("/login")
-  }
+    await logout();
+    navigate("/login");
+  };
 
   const formatDate = (dateStr) => {
-    const date = new Date(dateStr)
-    const now = new Date()
-    const diff = now - date
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diff = now - date;
 
-    if (diff < 60000) return "just now"
-    if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`
-    if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`
-    return date.toLocaleDateString()
-  }
+    if (diff < 60000) return "just now";
+    if (diff < 3600000) return `${Math.floor(diff / 60000)}m ago`;
+    if (diff < 86400000) return `${Math.floor(diff / 3600000)}h ago`;
+    return date.toLocaleDateString();
+  };
 
   return (
     <div style={styles.container}>
@@ -74,7 +74,7 @@ const Dashboard = () => {
 
       {/* Modals */}
       {showCreate && <CreateRoom onClose={() => setShowCreate(false)} />}
-      {showJoin   && <JoinRoom   onClose={() => setShowJoin(false)} />}
+      {showJoin && <JoinRoom onClose={() => setShowJoin(false)} />}
 
       {/* Header */}
       <div style={styles.header}>
@@ -101,10 +101,7 @@ const Dashboard = () => {
             </p>
           </div>
           <div style={styles.actions}>
-            <button
-              onClick={() => setShowJoin(true)}
-              style={styles.joinBtn}
-            >
+            <button onClick={() => setShowJoin(true)} style={styles.joinBtn}>
               Join Room
             </button>
             <button
@@ -140,8 +137,12 @@ const Dashboard = () => {
                 key={room.roomId}
                 onClick={() => navigate(`/room/${room.roomId}`)}
                 style={styles.card}
-                onMouseEnter={e => e.currentTarget.style.borderColor = "#58a6ff"}
-                onMouseLeave={e => e.currentTarget.style.borderColor = "#30363d"}
+                onMouseEnter={(e) =>
+                  (e.currentTarget.style.borderColor = "#58a6ff")
+                }
+                onMouseLeave={(e) =>
+                  (e.currentTarget.style.borderColor = "#30363d")
+                }
               >
                 {/* Card header */}
                 <div style={styles.cardHeader}>
@@ -169,18 +170,35 @@ const Dashboard = () => {
                 <div
                   style={styles.roomId}
                   onClick={(e) => {
-                    e.stopPropagation()
-                    navigator.clipboard.writeText(room.roomId)
-                    setToast({ message: "Room ID copied!", type: "success" })
+                    e.stopPropagation();
+                    navigator.clipboard.writeText(room.roomId);
+                    setToast({ message: "Room ID copied!", type: "success" });
                   }}
                   title="Click to copy Room ID"
                 >
                   🔗 {room.roomId}
                 </div>
 
+                <div
+                  style={styles.sessionLink}
+                  onClick={async (e) => {
+                    e.stopPropagation();
+                    const res = await API.get(
+                      `/api/sessions/room/${room.roomId}`,
+                    );
+                    const sessions = res.data.sessions;
+                    if (sessions.length > 0) {
+                      navigate(`/session/${sessions[0]._id}`);
+                    } else {
+                      setToast({ message: "No recordings yet", type: "info" });
+                    }
+                  }}
+                >
+                  🎬 View recordings
+                </div>
+
                 {/* Delete button — only for owner */}
-                {room.owner?._id === user?._id ||
-                 room.owner === user?._id ? (
+                {room.owner?._id === user?._id || room.owner === user?._id ? (
                   <button
                     onClick={(e) => handleDelete(room.roomId, e)}
                     style={styles.deleteBtn}
@@ -195,8 +213,8 @@ const Dashboard = () => {
         )}
       </div>
     </div>
-  )
-}
+  );
+};
 
 const styles = {
   container: {
@@ -337,7 +355,7 @@ const styles = {
     fontWeight: "600",
     color: "#e6edf3",
     margin: "0 0 6px",
-    paddingRight: "28px",  // space for delete button
+    paddingRight: "28px", // space for delete button
   },
   cardMeta: {
     fontSize: "0.8rem",
@@ -365,6 +383,6 @@ const styles = {
     opacity: 0.5,
     padding: "4px",
   },
-}
+};
 
-export default Dashboard
+export default Dashboard;

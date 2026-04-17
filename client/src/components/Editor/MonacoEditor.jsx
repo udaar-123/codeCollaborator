@@ -34,6 +34,11 @@ const MonacoEditor = ({
       },
     });
     monaco.editor.setTheme("codeeditor-dark");
+    editor.onDidChangeModelContent((event) => {
+      if (onChange) {
+        onChange(editor.getValue(), event);
+      }
+    });
     if (onCursorChange) {
       editor.onDidChangeCursorPosition((e) => {
         onCursorChange(e.position);
@@ -49,7 +54,6 @@ const MonacoEditor = ({
         language={language}
         value={content}
         onMount={handleMount}
-        onChange={onChange}
         options={{
           fontSize: 14,
           fontFamily: "'Fira Code', 'Cascadia Code', Consolas, monospace",
@@ -80,4 +84,5 @@ const MonacoEditor = ({
     </div>
   );
 };
+
 export default MonacoEditor;

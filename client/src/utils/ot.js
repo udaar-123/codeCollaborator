@@ -2,30 +2,25 @@
 // Apply operations to local editor content
 
 export const applyOp = (content, op) => {
-  if (op.type === "noop") return content
+  if (op.type === "noop") return content;
 
   if (op.type === "insert") {
-    return (
-      content.slice(0, op.position) +
-      op.text +
-      content.slice(op.position)
-    )
+    return content.slice(0, op.position) + op.text + content.slice(op.position);
   }
 
   if (op.type === "delete") {
     return (
-      content.slice(0, op.position) +
-      content.slice(op.position + op.length)
-    )
+      content.slice(0, op.position) + content.slice(op.position + op.length)
+    );
   }
 
-  return content
-}
+  return content;
+};
 
 // Convert Monaco change event to our operation format
 // Monaco gives us a list of changes — we convert to our op format
 export const monacoChangeToOp = (change, content) => {
-  const { rangeOffset, rangeLength, text } = change
+  const { rangeOffset, rangeLength, text } = change;
 
   if (text.length > 0 && rangeLength === 0) {
     // Pure insert
@@ -33,7 +28,7 @@ export const monacoChangeToOp = (change, content) => {
       type: "insert",
       position: rangeOffset,
       text,
-    }
+    };
   }
 
   if (text.length === 0 && rangeLength > 0) {
@@ -42,7 +37,7 @@ export const monacoChangeToOp = (change, content) => {
       type: "delete",
       position: rangeOffset,
       length: rangeLength,
-    }
+    };
   }
 
   if (text.length > 0 && rangeLength > 0) {
@@ -58,9 +53,9 @@ export const monacoChangeToOp = (change, content) => {
         type: "insert",
         position: rangeOffset,
         text,
-      }
-    ]
+      },
+    ];
   }
 
-  return null
-}
+  return null;
+};

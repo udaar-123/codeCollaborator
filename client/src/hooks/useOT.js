@@ -1,9 +1,17 @@
 import { useRef, useCallback, useEffect } from "react";
 import { monacoChangeToOp, applyOp } from "../utils/ot.js";
 
-export const useOT = ({ socket, roomId, editorRef, setCode, userId }) => {
+export const useOT = ({
+  socket,
+  roomId,
+  editorRef,
+  setCode,
+  userId,
+  onOperation,
+}) => {
   const versionRef = useRef(0);
-  const pendingOps = useRef([]);
+  const pendingOps = useRef(new Map()); // Track ops by ID instead of array
+  const opIdRef = useRef(0); // Auto-increment op ID
   const isApplyingRef = useRef(false);
 
   useEffect(() => {
@@ -20,11 +28,11 @@ export const useOT = ({ socket, roomId, editorRef, setCode, userId }) => {
       }, 100);
     };
 
-    const onOperation = ({ op, version, userId: senderId }) => {
+    const onOperation = ({ op, version, userId: senderId, batchId }) => {
       versionRef.current = version;
 
       if (senderId === userId?.toString()) {
-        pendingOps.current.shift();
+        pendingOps.current.delete(batchId);
         return;
       }
 
@@ -43,6 +51,7 @@ export const useOT = ({ socket, roomId, editorRef, setCode, userId }) => {
           return;
         }
 
+        const model = editor.getModel();
         editor.executeEdits("remote-op", [
           {
             range,
@@ -50,18 +59,19 @@ export const useOT = ({ socket, roomId, editorRef, setCode, userId }) => {
             forceMoveMarkers: true,
           },
         ]);
+
+        const afterContent = model.getValue();
+        setCode(afterContent);
       } catch (err) {
-        console.log(" Error applying remote op:", err.message);
+        // Silently handle error
       } finally {
         isApplyingRef.current = false;
       }
     };
 
     const onRoomReset = ({ content, version, language }) => {
-      console.log("🔄 room-reset received:", {
-        version,
-        preview: content.slice(0, 30),
-      });
+      // Clear all pending operations to avoid stale ops being applied
+      pendingOps.current.clear();
 
       versionRef.current = version;
       isApplyingRef.current = true;
@@ -85,7 +95,6 @@ export const useOT = ({ socket, roomId, editorRef, setCode, userId }) => {
 
   const handleChange = useCallback(
     (value, event) => {
-      // Always update local code state, even if applying remote op
       setCode(value);
 
       if (isApplyingRef.current) {
@@ -104,18 +113,25 @@ export const useOT = ({ socket, roomId, editorRef, setCode, userId }) => {
         }
         const opList = Array.isArray(ops) ? ops : [ops];
 
+        // Assign same batch ID to all ops from this change event
+        const batchId = opIdRef.current++;
+
         for (const op of opList) {
           socket.emit("operation", {
             roomId,
             op,
+            batchId,
             version: versionRef.current,
           });
 
-          pendingOps.current.push(op);
+          pendingOps.current.set(batchId, op);
+          if (onOperation) {
+            onOperation("operation", op);
+          }
         }
       }
     },
-    [socket, roomId, setCode],
+    [socket, roomId, setCode, onOperation],
   );
 
   return { handleChange };

@@ -80,7 +80,7 @@ export function initServer(server) {
     });
 
     // ─── OPERATION ─────────────────────
-    socket.on("operation", async ({ roomId, op, version }) => {
+    socket.on("operation", async ({ roomId, op, batchId, version }) => {
       try {
         const state = getRoomState(roomId);
         if (!state) return;
@@ -96,27 +96,43 @@ export function initServer(server) {
 
         // Apply transformed op to server document
         const newContent = applyOp(state.content, transformedOp);
+        const expectedLengthChange =
+          transformedOp.type === "insert"
+            ? transformedOp.text.length
+            : transformedOp.type === "delete"
+              ? -transformedOp.length
+              : 0;
+
+        const actualLengthChange = newContent.length - state.content.length;
+
+        if (actualLengthChange !== expectedLengthChange) {
+          console.error("❌ OT sanity check failed — not saving", {
+            expected: expectedLengthChange,
+            actual: actualLengthChange,
+            op: transformedOp,
+            oldContent: state.content,
+            newContent,
+          });
+          return; // reject this op — don't corrupt DB
+        }
         updateRoomState(roomId, newContent, transformedOp);
 
         const updatedState = getRoomState(roomId);
 
-        // Send transformed op back to ALL users in room
         io.to(roomId).emit("operation", {
           op: transformedOp,
+          batchId,
           version: updatedState.version,
           userId,
         });
 
-        // Periodically save content to DB (every 10 ops)
-        if (updatedState.version % 10 === 0) {
-          await Room.updateOne(
-            { roomId },
-            {
-              content: updatedState.content,
-              version: updatedState.version,
-            },
-          );
-        }
+        await Room.updateOne(
+          { roomId },
+          {
+            content: updatedState.content,
+            version: updatedState.version,
+          },
+        );
       } catch (error) {
         logger.error({ event: "operation_error", error: error.message });
       }
@@ -145,23 +161,24 @@ export function initServer(server) {
         state.version = 0;
         state.operations = [];
 
-        // Broadcast reset to all users in room
+        // Broadcast reset to all users in room (including sender)
         io.to(roomId).emit("room-reset", {
           content,
           version: 0,
           language,
         });
 
-        // Save to DB immediately
+        // Save to DB immediately with language update
         await Room.updateOne(
           { roomId },
           {
             content,
+            language, // Update language field as well
             version: 0,
           },
         );
 
-        logger.info({ event: "room_reset", roomId, userId });
+        logger.info({ event: "room_reset", roomId, userId, language });
       } catch (error) {
         logger.error({ event: "reset_room_error", error: error.message });
       }
@@ -213,6 +230,79 @@ export function initServer(server) {
           socket.emit("output-error", { message, runId });
         },
       );
+    });
+
+    socket.on("call-initiated", ({ toUserId, type, callId, fromName }) => {
+      const recipientSockets = onlineUsers.get(toUserId);
+      if (!recipientSockets || recipientSockets.size === 0) {
+        socket.emit("call-error", { message: "User is offline" });
+        return;
+      }
+      for (const socketId of recipientSockets) {
+        io.to(socketId).emit("incoming-call", {
+          fromUserId: userId,
+          fromName,
+          type,
+          callId,
+        });
+      }
+    });
+
+    socket.on("offer", ({ toUserId, offer, callId }) => {
+      const sockets = onlineUsers.get(toUserId);
+      if (!sockets) return;
+      sockets.forEach((id) => {
+        io.to(id).emit("offer", { from: userId, offer, callId });
+      });
+    });
+
+    socket.on("answer", ({ toUserId, answer, callId }) => {
+      const sockets = onlineUsers.get(toUserId);
+      if (!sockets) return;
+      sockets.forEach((id) => {
+        io.to(id).emit("answer", { from: userId, answer, callId });
+      });
+    });
+
+    socket.on("ice-candidate", ({ toUserId, candidate, callId }) => {
+      const sockets = onlineUsers.get(toUserId);
+      if (!sockets) return;
+      for (const socketId of sockets) {
+        io.to(socketId).emit("ice-candidate", {
+          from: userId,
+          candidate,
+          callId,
+        });
+      }
+    });
+
+    socket.on("call-accepted", ({ toUserId, callId }) => {
+      const sockets = onlineUsers.get(toUserId);
+      if (!sockets) return;
+      for (const socketId of sockets) {
+        io.to(socketId).emit("call-accepted", { fromUserId: userId, callId });
+      }
+    });
+
+    socket.on("call-rejected", ({ toUserId, callId }) => {
+      const sockets = onlineUsers.get(toUserId);
+      if (!sockets) return;
+      for (const socketId of sockets) {
+        io.to(socketId).emit("call-rejected", {
+          fromUserId: userId,
+          reason: "User declined",
+          callId,
+        });
+      }
+    });
+
+    socket.on("call-ended", ({ toUserId, callId } = {}) => {
+      if (!toUserId) return;
+      const sockets = onlineUsers.get(toUserId);
+      if (!sockets) return;
+      for (const socketId of sockets) {
+        io.to(socketId).emit("call-ended", { fromUserId: userId, callId });
+      }
     });
 
     // ─── DISCONNECT ──────────────────────────────────────────

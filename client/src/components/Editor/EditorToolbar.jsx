@@ -1,4 +1,4 @@
-import { LANGUAGES } from "../../utils/languageConfig.js"
+import { LANGUAGES } from "../../utils/languageConfig.js";
 
 const EditorToolbar = ({
   language,
@@ -9,14 +9,15 @@ const EditorToolbar = ({
   participants,
   isOwner,
   onReset,
+  onAudioCall,
+  onVideoCall,
+  isCallActive,
 }) => {
   return (
     <div style={styles.toolbar}>
-     
       <div style={styles.left}>
         <span style={styles.roomName}>{roomName}</span>
 
-      
         <div style={styles.participants}>
           {participants?.slice(0, 5).map((p, i) => (
             <div
@@ -35,16 +36,15 @@ const EditorToolbar = ({
         </div>
       </div>
 
-    
       <div style={styles.center}>
         <select
           value={language}
           onChange={(e) => onLanguageChange(e.target.value)}
           style={styles.select}
-          disabled={!isOwner}  
+          disabled={!isOwner}
           title={!isOwner ? "Only the owner can change language" : ""}
         >
-          {LANGUAGES.map(l => (
+          {LANGUAGES.map((l) => (
             <option key={l.value} value={l.value}>
               {l.icon} {l.label}
             </option>
@@ -53,6 +53,30 @@ const EditorToolbar = ({
       </div>
 
       <div style={styles.right}>
+        <button
+          onClick={onAudioCall}
+          disabled={isCallActive}
+          style={{
+            ...styles.callBtn,
+            opacity: isCallActive ? 0.5 : 1,
+            cursor: isCallActive ? "not-allowed" : "pointer",
+          }}
+          title="Start audio call"
+        >
+          📞
+        </button>
+        <button
+          onClick={onVideoCall}
+          disabled={isCallActive}
+          style={{
+            ...styles.callBtn,
+            opacity: isCallActive ? 0.5 : 1,
+            cursor: isCallActive ? "not-allowed" : "pointer",
+          }}
+          title="Start video call"
+        >
+          📹
+        </button>
         <button
           onClick={onReset}
           style={styles.resetBtn}
@@ -74,10 +98,19 @@ const EditorToolbar = ({
         </button>
       </div>
     </div>
-  )
-}
+  );
+};
 
 const styles = {
+  callBtn: {
+    background: "transparent",
+    border: "1px solid #30363d",
+    color: "#e6edf3",
+    padding: "5px 10px",
+    borderRadius: "6px",
+    fontSize: "0.9rem",
+    marginRight: "6px",
+  },
   toolbar: {
     height: "48px",
     background: "#161b22",
@@ -162,6 +195,6 @@ const styles = {
     cursor: "pointer",
     transition: "background 0.2s",
   },
-}
+};
 
-export default EditorToolbar
+export default EditorToolbar;

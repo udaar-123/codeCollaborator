@@ -1,68 +1,95 @@
-import { useNavigate } from "react-router-dom"
-import { useAuth } from "../../context/AuthContext.jsx"
+import { useNavigate } from "react-router-dom";
+import { useAuth } from "../../context/AuthContext.jsx";
 
-const RoomHeader = ({ room, onCopyId }) => {
-  const navigate = useNavigate()
-  const { user } = useAuth()
+const RoomHeader = ({
+  room,
+  onCopyId,
+  isRecording,
+  startRecording,
+  stopRecording,
+  code,
+  language,
+}) => {
+  const navigate = useNavigate();
+  const { user } = useAuth();
 
-  if (!room) return null
+  if (!room) return null;
 
   const myParticipant = room.participants?.find(
-    p => p.userId?._id === user?._id || p.userId === user?._id
-  )
+    (p) => p.userId?._id === user?._id || p.userId === user?._id,
+  );
 
   return (
     <div style={styles.header}>
-      {/* Left — back + room info */}
       <div style={styles.left}>
-        <button
-          onClick={() => navigate("/dashboard")}
-          style={styles.backBtn}
-          title="Back to dashboard"
-        >
+        <button onClick={() => navigate("/dashboard")} style={styles.backBtn}>
           ← Back
         </button>
-
         <div style={styles.divider} />
-
         <div style={styles.roomInfo}>
           <span style={styles.roomName}>{room.name}</span>
-          <span
-            style={styles.roomId}
-            onClick={onCopyId}
-            title="Click to copy Room ID"
-          >
+          <span style={styles.roomId} onClick={onCopyId}>
             🔗 {room.roomId}
           </span>
         </div>
       </div>
 
-      {/* Right — role badge + user name */}
+      {/* Right side mein buttons add karein */}
       <div style={styles.right}>
+        {/* --- RECORDING BUTTONS START --- */}
+        {isRecording ? (
+          <button
+            onClick={() => stopRecording(code, language)}
+            style={styles.recordingBtn}
+          >
+            ⏹ Stop Recording
+          </button>
+        ) : (
+          <button onClick={startRecording} style={styles.startRecordBtn}>
+            🔴 Record
+          </button>
+        )}
+
+        {/* --- RECORDING BUTTONS END --- */}
         {myParticipant && (
-          <span style={{
-            ...styles.roleBadge,
-            background: myParticipant.role === "owner"
-              ? "#2d1b2d"
-              : myParticipant.role === "editor"
-              ? "#1b2d1b"
-              : "#1b2433",
-            color: myParticipant.role === "owner"
-              ? "#d2a8ff"
-              : myParticipant.role === "editor"
-              ? "#3fb950"
-              : "#58a6ff",
-          }}>
+          <span
+            style={{
+              ...styles.roleBadge,
+              background:
+                myParticipant.role === "owner" ? "#2d1b2d" : "#1b2d1b",
+              color: myParticipant.role === "owner" ? "#d2a8ff" : "#3fb950",
+            }}
+          >
             {myParticipant.role}
           </span>
         )}
         <span style={styles.userName}>{user?.name}</span>
       </div>
     </div>
-  )
-}
+  );
+};
 
 const styles = {
+  recordingBtn: {
+    background: "#da3633",
+    color: "white",
+    border: "none",
+    padding: "4px 12px",
+    borderRadius: "6px",
+    cursor: "pointer",
+    fontSize: "0.8rem",
+    fontWeight: "bold",
+  },
+  startRecordBtn: {
+    background: "#238636",
+    color: "white",
+    border: "none",
+    padding: "4px 12px",
+    borderRadius: "6px",
+    cursor: "pointer",
+    fontSize: "0.8rem",
+    fontWeight: "bold",
+  },
   header: {
     height: "48px",
     background: "#161b22",
@@ -127,6 +154,6 @@ const styles = {
     fontSize: "0.85rem",
     color: "#8b949e",
   },
-}
+};
 
-export default RoomHeader
+export default RoomHeader;

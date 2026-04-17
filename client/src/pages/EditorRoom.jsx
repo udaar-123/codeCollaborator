@@ -11,8 +11,20 @@ import RemoteCursorsOverlay from "../components/Editor/RemoteCursorOverlay.jsx";
 import Toast from "../components/shared/Toast.jsx";
 import { useCursors } from "../hooks/useCursors.js";
 import { DEFAULT_CODE } from "../utils/languageConfig.js";
+import { useWebRTC } from "../hooks/useWebRTC.js";
+import { generateCallId } from "../utils/useWebRTCUtils.js";
+import { useSessionRecorder } from "../hooks/useSessionRecorder.js";
+import CallOverlay from "../components/Call/CallOverlay.jsx";
+import IncomingCall from "../components/Call/IncomingCall.jsx";
 
 const EditorRoom = () => {
+  const [isCallActive, setIsCallActive] = useState(false);
+  const [callType, setCallType] = useState(null);
+  const [callStatus, setCallStatus] = useState("Connecting...");
+  const [currentCallId, setCurrentCallId] = useState(null);
+  const [currentCallTarget, setCurrentCallTarget] = useState(null);
+  const [incomingCall, setIncomingCall] = useState(null);
+
   const { roomId } = useParams();
   const { user, socket } = useAuth();
   const { getRoom } = useRoom();
@@ -27,12 +39,18 @@ const EditorRoom = () => {
   const editorRef = useRef(null);
   const runIdRef = useRef(null);
   const runSafetyTimer = useRef(null);
+  const webRTC = useWebRTC(socket);
+
+  const { isRecording, startRecording, stopRecording, record, isRecordingRef } =
+    useSessionRecorder({ roomId, roomName: room?.name, room });
+
   const { handleChange } = useOT({
     socket,
     roomId,
     editorRef,
     setCode,
     userId: user?._id,
+    onOperation: record,
   });
 
   const myColor =
@@ -49,6 +67,9 @@ const EditorRoom = () => {
   });
 
   useEffect(() => {
+    setCode("");
+    setOutput([]);
+    setLanguage("javascript");
     const load = async () => {
       try {
         const data = await getRoom(roomId);
@@ -58,6 +79,7 @@ const EditorRoom = () => {
           data.content && data.content.trim() !== ""
             ? data.content
             : DEFAULT_CODE[data.language];
+        console.log(initialCode);
         setCode(initialCode);
 
         socket.emit("join-room", { roomId });
@@ -81,8 +103,15 @@ const EditorRoom = () => {
 
     const onLanguageChanged = ({ language: newLang }) => {
       setLanguage(newLang);
-      setCode(DEFAULT_CODE[newLang]);
       setToast({ message: `Language changed to ${newLang}`, type: "info" });
+    };
+
+    const onRoomReset = ({ language, version, content }) => {
+      // Update language when room resets (triggered by owner changing language)
+      if (language) {
+        setLanguage(language);
+        setToast({ message: `Language changed to ${language}`, type: "info" });
+      }
     };
 
     const onUserJoined = ({ name }) => {
@@ -125,6 +154,7 @@ const EditorRoom = () => {
     };
 
     socket.on("language-changed", onLanguageChanged);
+    socket.on("room-reset", onRoomReset);
     socket.on("user-joined", onUserJoined);
     socket.on("user-left", onUserLeft);
     socket.on("output-chunk", onOutputChunk);
@@ -132,6 +162,7 @@ const EditorRoom = () => {
     socket.on("output-error", onOutputError);
     return () => {
       socket.off("language-changed", onLanguageChanged);
+      socket.off("room-reset", onRoomReset);
       socket.off("user-joined", onUserJoined);
       socket.off("user-left", onUserLeft);
       socket.off("output-chunk", onOutputChunk);
@@ -139,6 +170,153 @@ const EditorRoom = () => {
       socket.off("output-error", onOutputError);
     };
   }, [socket, roomId]);
+
+  const handleStartCall = async (type) => {
+    // Get other participant's userId
+    const otherParticipant = room?.participants?.find((p) => {
+      const pId = p.userId?._id || p.userId;
+      return pId?.toString() !== user?._id?.toString();
+    });
+
+    if (!otherParticipant) {
+      setToast({ message: "No other user in room", type: "error" });
+      return;
+    }
+
+    const toUserId = (
+      otherParticipant.userId?._id || otherParticipant.userId
+    ).toString();
+
+    try {
+      const callId = generateCallId();
+      const stream = await webRTC.startLocalStream(type);
+
+      if (stream) {
+        setIsCallActive(true);
+        setCallType(type);
+        setCallStatus("Ringing...");
+        setCurrentCallId(callId);
+        setCurrentCallTarget(toUserId);
+
+        await webRTC.createOffer(toUserId, callId);
+
+        socket.emit("call-initiated", {
+          toUserId,
+          fromName: user.name,
+          type,
+          callId,
+        });
+      }
+    } catch (err) {
+      setToast({
+        message: "Failed to start call: " + err.message,
+        type: "error",
+      });
+    }
+  };
+
+  const handleEndCall = () => {
+    webRTC.endCall({ toUserId: currentCallTarget, callId: currentCallId });
+    webRTC.stopLocalStream();
+    setIsCallActive(false);
+    setCallType(null);
+    setCallStatus("Connecting...");
+    setCurrentCallId(null);
+    setCurrentCallTarget(null);
+  };
+
+  const handleAcceptCall = async () => {
+    if (!incomingCall) return;
+
+    try {
+      const stream = await webRTC.startLocalStream(incomingCall.type);
+
+      if (stream) {
+        setIsCallActive(true);
+        setCallType(incomingCall.type);
+        setCallStatus("Connecting...");
+        setCurrentCallId(incomingCall.callId);
+        setCurrentCallTarget(incomingCall.fromUserId);
+
+        socket.emit("call-accepted", {
+          toUserId: incomingCall.fromUserId,
+          callId: incomingCall.callId,
+        });
+
+        setIncomingCall(null);
+      }
+    } catch (err) {
+      setToast({ message: "Failed to accept call", type: "error" });
+      setIncomingCall(null);
+    }
+  };
+
+  const handleRejectCall = () => {
+    if (!incomingCall) return;
+    socket.emit("call-rejected", {
+      toUserId: incomingCall.fromUserId,
+      callId: incomingCall.callId,
+    });
+    setIncomingCall(null);
+  };
+
+  useEffect(() => {
+    if (!socket) return;
+
+    const onIncomingCall = (data) => {
+      setIncomingCall(data);
+    };
+
+    const onOffer = async ({ from, offer, callId }) => {
+      if (webRTC.localStream) {
+        await webRTC.handleOffer(from, offer, callId, webRTC.localStream);
+      }
+    };
+
+    const onCallAccepted = ({ callId }) => {
+      setCallStatus("Connected");
+    };
+
+    const onCallRejected = () => {
+      webRTC.stopLocalStream();
+      setIsCallActive(false);
+      setCallType(null);
+      setCurrentCallId(null);
+      setCurrentCallTarget(null);
+      setToast({ message: "Call rejected", type: "info" });
+    };
+
+    const onCallEnded = () => {
+      webRTC.stopLocalStream();
+      setIsCallActive(false);
+      setCallType(null);
+      setCallStatus("Connecting...");
+      setCurrentCallId(null);
+      setCurrentCallTarget(null);
+    };
+
+    const onCallError = ({ message }) => {
+      setToast({ message, type: "error" });
+      setIsCallActive(false);
+      webRTC.stopLocalStream();
+    };
+
+    socket.on("incoming-call", onIncomingCall);
+    socket.on("offer", onOffer);
+    socket.on("call-accepted", onCallAccepted);
+    socket.on("call-rejected", onCallRejected);
+    socket.on("call-ended", onCallEnded);
+    socket.on("call-error", onCallError);
+
+    return () => {
+      socket.off("incoming-call", onIncomingCall);
+      socket.off("offer", onOffer);
+      socket.off("call-accepted", onCallAccepted);
+      socket.off("call-rejected", onCallRejected);
+      socket.off("call-ended", onCallEnded);
+      socket.off("call-error", onCallError);
+    };
+  }, [socket, webRTC]);
 
   const handleReset = useCallback(() => {
     const boilerplate = DEFAULT_CODE[language];
@@ -153,11 +331,22 @@ const EditorRoom = () => {
 
   const handleLanguageChange = useCallback(
     (newLang) => {
+      // Don't call setCode here - let room-reset event handle it for all users
+      // If we call setCode here, Monaco onChange fires and sends operations that corrupt the code
       setLanguage(newLang);
-      setCode(DEFAULT_CODE[newLang]);
-      socket.emit("language-change", { roomId, language: newLang });
+
+      const boilerplate = DEFAULT_CODE[newLang];
+
+      // Emit reset-room to reset server state and broadcast to all users
+      // This ensures all users get the correct boilerplate and synchronized state
+      socket.emit("reset-room", {
+        roomId,
+        language: newLang,
+        content: boilerplate,
+      });
+      record("language", { language: newLang });
     },
-    [socket, roomId],
+    [socket, roomId, record],
   );
 
   const handleRun = useCallback(() => {
@@ -177,7 +366,18 @@ const EditorRoom = () => {
         ]);
       }
     }, 15000);
-  }, [code, language, roomId, socket, isRunning]);
+    record("run", { language, timestamp: Date.now() });
+  }, [code, language, roomId, socket, isRunning, record]);
+
+  useEffect(() => {
+    return () => {
+      clearAllCursors();
+      socket.emit("leave-room", { roomId });
+      if (isRecordingRef.current) {
+        stopRecording(code, language);
+      }
+    };
+  }, [roomId]);
 
   const isOwner = room?.owner?._id === user?._id || room?.owner === user?._id;
 
@@ -199,12 +399,39 @@ const EditorRoom = () => {
         />
       )}
 
+      {/* Incoming call notification */}
+      {incomingCall && (
+        <IncomingCall
+          callerName={incomingCall.fromName}
+          callType={incomingCall.type}
+          onAccept={handleAcceptCall}
+          onReject={handleRejectCall}
+        />
+      )}
+
+      {/* Active call overlay */}
+      {isCallActive && (
+        <CallOverlay
+          localStream={webRTC.localStream}
+          remoteStream={webRTC.remoteStream}
+          callStatus={callStatus}
+          callType={callType}
+          onEndCall={handleEndCall}
+          callerName={currentCallTarget}
+        />
+      )}
+
       <RoomHeader
         room={room}
         onCopyId={() => {
           navigator.clipboard.writeText(roomId);
           setToast({ message: "Room ID copied!", type: "success" });
         }}
+        isRecording={isRecording}
+        startRecording={startRecording}
+        stopRecording={stopRecording}
+        code={code}
+        language={language}
       />
 
       <EditorToolbar
@@ -216,6 +443,9 @@ const EditorRoom = () => {
         participants={room?.participants}
         isOwner={isOwner}
         onReset={handleReset}
+        onAudioCall={() => handleStartCall("audio")}
+        onVideoCall={() => handleStartCall("video")}
+        isCallActive={isCallActive}
       />
 
       <div style={styles.main}>
