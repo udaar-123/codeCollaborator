@@ -113,7 +113,7 @@ export function initServer(server) {
             oldContent: state.content,
             newContent,
           });
-          return; // reject this op — don't corrupt DB
+          return;
         }
         updateRoomState(roomId, newContent, transformedOp);
 

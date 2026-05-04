@@ -30,7 +30,7 @@ app.use("/api/sessions", sessionRoute);
 app.use(errorHandle);
 connectDB();
 
-const port = 3000;
+const port = process.env.PORT || 3000;
 server.listen(port, () => {
   logger.info(`Server is running on port ${port}`);
 });
