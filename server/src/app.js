@@ -17,14 +17,39 @@ const server = http.createServer(app);
 export const io = initServer(server);
 
 // Allow CORS from both development and production URLs
+// Function to normalize and validate origins
+const allowedOrigins = ["http://localhost:5173", "http://localhost:3000"];
+
+// Add CLIENT_URL if set, removing trailing slash
+if (process.env.CLIENT_URL) {
+  allowedOrigins.push(process.env.CLIENT_URL.replace(/\/$/, ""));
+}
+
+// Add Vercel URL if set
+if (process.env.VERCEL_URL) {
+  allowedOrigins.push(`https://${process.env.VERCEL_URL}`);
+}
+
 const corsOptions = {
-  origin: [
-    "http://localhost:5173",
-    "http://localhost:3000",
-    process.env.CLIENT_URL || "http://localhost:5173",
-    process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : null,
-  ].filter(Boolean),
+  origin: (origin, callback) => {
+    // Allow requests with no origin (like mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+
+    // Normalize origin by removing trailing slash for comparison
+    const normalizedOrigin = origin.replace(/\/$/, "");
+
+    if (
+      allowedOrigins.includes(normalizedOrigin) ||
+      allowedOrigins.includes(origin)
+    ) {
+      callback(null, true);
+    } else {
+      callback(new Error("CORS not allowed"));
+    }
+  },
   credentials: true,
+  methods: ["GET", "POST", "PUT", "DELETE", "PATCH", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
 };
 
 app.use(cors(corsOptions));

@@ -14,10 +14,39 @@ import {
 export const onlineUsers = new Map();
 
 export function initServer(server) {
+  // Build allowed origins for Socket.io
+  const socketAllowedOrigins = [
+    "http://localhost:5173",
+    "http://localhost:3000",
+  ];
+
+  if (process.env.CLIENT_URL) {
+    socketAllowedOrigins.push(process.env.CLIENT_URL.replace(/\/$/, ""));
+  }
+
+  if (process.env.VERCEL_URL) {
+    socketAllowedOrigins.push(`https://${process.env.VERCEL_URL}`);
+  }
+
   const io = new Server(server, {
     cors: {
-      origin: process.env.CLIENT_URL || "http://localhost:5173",
+      origin: (origin, callback) => {
+        if (!origin) return callback(null, true);
+
+        const normalizedOrigin = origin.replace(/\/$/, "");
+
+        if (
+          socketAllowedOrigins.includes(normalizedOrigin) ||
+          socketAllowedOrigins.includes(origin)
+        ) {
+          callback(null, true);
+        } else {
+          callback(new Error("CORS not allowed"));
+        }
+      },
       credentials: true,
+      methods: ["GET", "POST", "PUT", "DELETE"],
+      allowedHeaders: ["Content-Type", "Authorization"],
     },
   });
 
