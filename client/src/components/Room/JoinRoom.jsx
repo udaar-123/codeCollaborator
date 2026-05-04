@@ -1,28 +1,28 @@
-import { useState } from "react"
-import { useNavigate } from "react-router-dom"
-import { useRoom } from "../../hooks/useRoom.js"
-import Toast from "../shared/Toast.jsx"
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useRoom } from "../../hooks/useRoom.js";
+import Toast from "../Shared/Toast.jsx";
 
 const JoinRoom = ({ onClose }) => {
-  const [roomId, setRoomId] = useState("")
-  const [toast, setToast] = useState(null)
+  const [roomId, setRoomId] = useState("");
+  const [toast, setToast] = useState(null);
 
-  const { joinRoom, loading } = useRoom()
-  const navigate = useNavigate()
+  const { joinRoom, loading } = useRoom();
+  const navigate = useNavigate();
 
   const handleJoin = async () => {
     if (!roomId.trim()) {
-      setToast({ message: "Please enter a room ID", type: "error" })
-      return
+      setToast({ message: "Please enter a room ID", type: "error" });
+      return;
     }
 
     try {
-      const room = await joinRoom(roomId.trim())
-      navigate(`/room/${room.roomId}`)
+      const room = await joinRoom(roomId.trim());
+      navigate(`/room/${room.roomId}`);
     } catch (err) {
-      setToast({ message: err.message, type: "error" })
+      setToast({ message: err.message, type: "error" });
     }
-  }
+  };
 
   return (
     <div style={styles.overlay}>
@@ -37,7 +37,9 @@ const JoinRoom = ({ onClose }) => {
       <div style={styles.modal}>
         <div style={styles.header}>
           <h2 style={styles.title}>Join Room</h2>
-          <button onClick={onClose} style={styles.closeBtn}>✕</button>
+          <button onClick={onClose} style={styles.closeBtn}>
+            ✕
+          </button>
         </div>
 
         <div style={styles.body}>
@@ -59,7 +61,9 @@ const JoinRoom = ({ onClose }) => {
         </div>
 
         <div style={styles.footer}>
-          <button onClick={onClose} style={styles.cancelBtn}>Cancel</button>
+          <button onClick={onClose} style={styles.cancelBtn}>
+            Cancel
+          </button>
           <button
             onClick={handleJoin}
             disabled={loading}
@@ -74,8 +78,8 @@ const JoinRoom = ({ onClose }) => {
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
 const styles = {
   overlay: {
@@ -152,6 +156,6 @@ const styles = {
     fontSize: "0.9rem",
     fontWeight: "600",
   },
-}
+};
 
-export default JoinRoom
+export default JoinRoom;

@@ -134,7 +134,7 @@ const SessionReplay = () => {
         session.events,
         session.duration,
         applyEvent,
-        () => { },
+        () => {},
       );
     },
     [session, player, applyEvent],

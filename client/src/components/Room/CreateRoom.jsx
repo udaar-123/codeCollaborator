@@ -1,38 +1,38 @@
-import { useState } from "react"
-import { useNavigate } from "react-router-dom"
-import { useRoom } from "../../hooks/useRoom.js"
-import Toast from "../shared/Toast.jsx"
+import { useState } from "react";
+import { useNavigate } from "react-router-dom";
+import { useRoom } from "../../hooks/useRoom.js";
+import Toast from "../Shared/Toast.jsx";
 
 const LANGUAGES = [
   { value: "javascript", label: "JavaScript" },
-  { value: "python",     label: "Python" },
-  { value: "cpp",        label: "C++" },
-  { value: "java",       label: "Java" },
+  { value: "python", label: "Python" },
+  { value: "cpp", label: "C++" },
+  { value: "java", label: "Java" },
   { value: "typescript", label: "TypeScript" },
-]
+];
 
 const CreateRoom = ({ onClose }) => {
-  const [name, setName] = useState("")
-  const [language, setLanguage] = useState("javascript")
-  const [isPublic, setIsPublic] = useState(true)
-  const [toast, setToast] = useState(null)
+  const [name, setName] = useState("");
+  const [language, setLanguage] = useState("javascript");
+  const [isPublic, setIsPublic] = useState(true);
+  const [toast, setToast] = useState(null);
 
-  const { createRoom, loading } = useRoom()
-  const navigate = useNavigate()
+  const { createRoom, loading } = useRoom();
+  const navigate = useNavigate();
 
   const handleCreate = async () => {
     if (!name.trim()) {
-      setToast({ message: "Room name is required", type: "error" })
-      return
+      setToast({ message: "Room name is required", type: "error" });
+      return;
     }
 
     try {
-      const room = await createRoom(name, language, isPublic)
-      navigate(`/room/${room.roomId}`)  // go directly to editor
+      const room = await createRoom(name, language, isPublic);
+      navigate(`/room/${room.roomId}`); // go directly to editor
     } catch (err) {
-      setToast({ message: err.message, type: "error" })
+      setToast({ message: err.message, type: "error" });
     }
-  }
+  };
 
   return (
     <div style={styles.overlay}>
@@ -47,7 +47,9 @@ const CreateRoom = ({ onClose }) => {
       <div style={styles.modal}>
         <div style={styles.header}>
           <h2 style={styles.title}>Create Room</h2>
-          <button onClick={onClose} style={styles.closeBtn}>✕</button>
+          <button onClick={onClose} style={styles.closeBtn}>
+            ✕
+          </button>
         </div>
 
         <div style={styles.body}>
@@ -73,7 +75,7 @@ const CreateRoom = ({ onClose }) => {
               onChange={(e) => setLanguage(e.target.value)}
               style={styles.select}
             >
-              {LANGUAGES.map(l => (
+              {LANGUAGES.map((l) => (
                 <option key={l.value} value={l.value}>
                   {l.label}
                 </option>
@@ -94,10 +96,12 @@ const CreateRoom = ({ onClose }) => {
                 background: isPublic ? "#238636" : "#30363d",
               }}
             >
-              <div style={{
-                ...styles.toggleThumb,
-                transform: isPublic ? "translateX(20px)" : "translateX(2px)",
-              }} />
+              <div
+                style={{
+                  ...styles.toggleThumb,
+                  transform: isPublic ? "translateX(20px)" : "translateX(2px)",
+                }}
+              />
             </div>
           </div>
         </div>
@@ -120,8 +124,8 @@ const CreateRoom = ({ onClose }) => {
         </div>
       </div>
     </div>
-  )
-}
+  );
+};
 
 const styles = {
   overlay: {
@@ -251,6 +255,6 @@ const styles = {
     fontSize: "0.9rem",
     fontWeight: "600",
   },
-}
+};
 
-export default CreateRoom
+export default CreateRoom;
