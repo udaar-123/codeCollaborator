@@ -1,7 +1,8 @@
 {
-  "buildCommand": "cd client && npm run build",
-  "outputDirectory": "client/dist",
+  "buildCommand": "npm run build",
+  "outputDirectory": "dist",
   "framework": "vite",
+  "root": "client",
   "rewrites": [
     {
       "source": "/(.*)",

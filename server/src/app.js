@@ -16,11 +16,8 @@ const app = express();
 const server = http.createServer(app);
 export const io = initServer(server);
 
-// Allow CORS from both development and production URLs
-// Function to normalize and validate origins
 const allowedOrigins = ["http://localhost:5173", "http://localhost:3000"];
 
-// Add CLIENT_URL if set, removing trailing slash
 if (process.env.CLIENT_URL) {
   allowedOrigins.push(process.env.CLIENT_URL.replace(/\/$/, ""));
 }
@@ -32,10 +29,8 @@ if (process.env.VERCEL_URL) {
 
 const corsOptions = {
   origin: (origin, callback) => {
-    // Allow requests with no origin (like mobile apps or curl requests)
     if (!origin) return callback(null, true);
 
-    // Normalize origin by removing trailing slash for comparison
     const normalizedOrigin = origin.replace(/\/$/, "");
 
     if (
