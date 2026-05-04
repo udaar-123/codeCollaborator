@@ -4,7 +4,7 @@ import { useAuth } from "../context/AuthContext.jsx";
 import { useRoom } from "../hooks/useRoom.js";
 import CreateRoom from "../components/Room/CreateRoom.jsx";
 import JoinRoom from "../components/Room/JoinRoom.jsx";
-import Toast from "../components/shared/Toast.jsx";
+import Toast from "../components/Shared/Toast.jsx";
 
 const LANGUAGE_ICONS = {
   javascript: "🟨",

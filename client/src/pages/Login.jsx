@@ -1,7 +1,7 @@
 import { useState } from "react"
 import { Link, useNavigate } from "react-router-dom"
 import { useAuth } from "../context/AuthContext.jsx"
-import Toast from "../components/shared/Toast.jsx"
+import Toast from "../components/Shared/Toast.jsx"
 
 const Login = () => {
   const [email, setEmail] = useState("")

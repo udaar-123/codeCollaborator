@@ -4,7 +4,7 @@ import { useAuth } from "../context/AuthContext.jsx";
 import { useSessionPlayer } from "../hooks/useSessionPlayer.js";
 import MonacoEditor from "../components/Editor/MonacoEditor.jsx";
 import PlaybackControls from "../components/Playback/PlaybackControl.jsx";
-import Toast from "../components/shared/Toast.jsx";
+import Toast from "../components/Shared/Toast.jsx";
 import { applyOp } from "../utils/ot.js";
 import { DEFAULT_CODE } from "../utils/languageConfig.js";
 
@@ -22,7 +22,6 @@ const SessionReplay = () => {
 
   const editorRef = useRef(null);
   const codeRef = useRef(""); // track code without re-renders
-
   const player = useSessionPlayer();
 
   // Load session on mount
@@ -135,7 +134,7 @@ const SessionReplay = () => {
         session.events,
         session.duration,
         applyEvent,
-        () => {},
+        () => { },
       );
     },
     [session, player, applyEvent],

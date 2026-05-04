@@ -8,7 +8,7 @@ import EditorToolbar from "../components/Editor/EditorToolbar.jsx";
 import OutputPanel from "../components/Editor/OutputPanel.jsx";
 import RoomHeader from "../components/Room/RoomHeader.jsx";
 import RemoteCursorsOverlay from "../components/Editor/RemoteCursorOverlay.jsx";
-import Toast from "../components/shared/Toast.jsx";
+import Toast from "../components/Shared/Toast.jsx";
 import { useCursors } from "../hooks/useCursors.js";
 import { DEFAULT_CODE } from "../utils/languageConfig.js";
 import { useWebRTC } from "../hooks/useWebRTC.js";
